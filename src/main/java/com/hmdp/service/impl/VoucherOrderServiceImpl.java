@@ -1,5 +1,6 @@
 package com.hmdp.service.impl;
 
+import com.baomidou.mybatisplus.extension.conditions.update.UpdateChainWrapper;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.entity.VoucherOrder;
@@ -13,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+
+import static com.hmdp.dto.Result.fail;
 
 /**
  * <p>
@@ -39,21 +42,26 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         LocalDateTime now = LocalDateTime.now();
 
         if(now.isBefore(seckillVoucher.getBeginTime()))
-            return Result.fail("没开始卖呢");
+            return fail("没开始卖呢");
         if(now.isAfter(seckillVoucher.getEndTime()))
-            return Result.fail("活动结束了");
+            return fail("活动结束了");
         if(seckillVoucher.getStock() < 1)
-            return Result.fail("卖完了");
+            return fail("卖完了");
 
-        seckillVoucherService.update().set("stock", seckillVoucher.getStock() - 1).eq("voucher_id", id);
+        boolean success = seckillVoucherService.update().setSql("stock = stock - 1").eq("voucher_id", id).update();
 
-        VoucherOrder voucherOrder = new VoucherOrder();
-        voucherOrder.setId(redisIdGenerator.nextId("hmdp:voucher:order"));
-        voucherOrder.setUserId(UserHolder.getUser().getId());
-        voucherOrder.setVoucherId(id);
-        save(voucherOrder);
+        if(success){
+            VoucherOrder voucherOrder = new VoucherOrder();
+            voucherOrder.setId(redisIdGenerator.nextId("hmdp:voucher:order"));
+            voucherOrder.setUserId(UserHolder.getUser().getId());
+            voucherOrder.setVoucherId(id);
+            save(voucherOrder);
+            long voucherOrderId = voucherOrder.getId();
+            return Result.ok(voucherOrderId);
+        }
 
-        long voucherOrderId = voucherOrder.getId();
-        return Result.ok(voucherOrderId);
+
+        return Result.fail("失败");
+
     }
 }
