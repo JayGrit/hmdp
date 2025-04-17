@@ -34,6 +34,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private RedisIdGenerator redisIdGenerator;
 
+    @Resource
+    private IVoucherOrderService proxy;
+
     @Override
     public Result addSeckillOrder(long id) {
         SeckillVoucher seckillVoucher = seckillVoucherService.getById(id);
@@ -49,7 +52,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
         Long userId = UserHolder.getUser().getId();
         synchronized (userId.toString().intern()) {
-            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
             return proxy.createVoucherOrder(id);
         }
 
