@@ -2,7 +2,9 @@ package com.hmdp.service.impl;
 
 import com.baomidou.mybatisplus.extension.conditions.update.UpdateChainWrapper;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.SeckillVoucher;
+import com.hmdp.entity.User;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.IVoucherOrderService;
@@ -48,11 +50,22 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if(seckillVoucher.getStock() < 1)
             return fail("卖完了");
 
-        boolean success = seckillVoucherService.update().
-                setSql("stock = stock - 1").
-                eq("voucher_id", id).
-                gt("stock", 0).
-                update();
+        UserDTO user = UserHolder.getUser();
+        long userId = user.getId();
+        int orderByUserCount = query()
+                .eq("voucher_id", id)
+                .eq("user_id", userId)
+                .count();
+
+        if(orderByUserCount > 0)
+            return Result.fail("你已经买过了");
+
+
+        boolean success = seckillVoucherService.update()
+                .setSql("stock = stock - 1")
+                .eq("voucher_id", id)
+                .gt("stock", 0)
+                .update();
 
         if(success){
             VoucherOrder voucherOrder = new VoucherOrder();
