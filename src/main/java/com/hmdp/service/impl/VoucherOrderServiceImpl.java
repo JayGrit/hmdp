@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdGenerator;
 import com.hmdp.utils.UserHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIdGenerator redisIdGenerator;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result addSeckillOrder(long id) {
         SeckillVoucher seckillVoucher = seckillVoucherService.getById(id);
 
