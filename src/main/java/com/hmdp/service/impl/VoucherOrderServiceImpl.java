@@ -1,16 +1,14 @@
 package com.hmdp.service.impl;
 
-import com.baomidou.mybatisplus.extension.conditions.update.UpdateChainWrapper;
 import com.hmdp.dto.Result;
-import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.SeckillVoucher;
-import com.hmdp.entity.User;
 import com.hmdp.entity.VoucherOrder;
 import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdGenerator;
 import com.hmdp.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +35,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIdGenerator redisIdGenerator;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public Result addSeckillOrder(long id) {
         SeckillVoucher seckillVoucher = seckillVoucherService.getById(id);
 
@@ -50,8 +47,17 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if(seckillVoucher.getStock() < 1)
             return fail("卖完了");
 
-        UserDTO user = UserHolder.getUser();
-        long userId = user.getId();
+        Long userId = UserHolder.getUser().getId();
+        synchronized (userId.toString().intern()) {
+            IVoucherOrderService proxy = (IVoucherOrderService) AopContext.currentProxy();
+            return proxy.createVoucherOrder(id);
+        }
+
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Result createVoucherOrder(long id) {
+        long userId = UserHolder.getUser().getId();
         int orderByUserCount = query()
                 .eq("voucher_id", id)
                 .eq("user_id", userId)
@@ -67,18 +73,18 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 .gt("stock", 0)
                 .update();
 
-        if(success){
-            VoucherOrder voucherOrder = new VoucherOrder();
-            voucherOrder.setId(redisIdGenerator.nextId("hmdp:voucher:order"));
-            voucherOrder.setUserId(UserHolder.getUser().getId());
-            voucherOrder.setVoucherId(id);
-            save(voucherOrder);
-            long voucherOrderId = voucherOrder.getId();
-            return Result.ok(voucherOrderId);
-        }
+        if(!success)
+            return Result.fail("库存不足");
 
 
-        return Result.fail("失败");
+        VoucherOrder voucherOrder = new VoucherOrder();
+        voucherOrder.setId(redisIdGenerator.nextId("hmdp:voucher:order"));
+        voucherOrder.setUserId(UserHolder.getUser().getId());
+        voucherOrder.setVoucherId(id);
+        save(voucherOrder);
+        long voucherOrderId = voucherOrder.getId();
 
+
+        return Result.ok(voucherOrderId);
     }
 }
