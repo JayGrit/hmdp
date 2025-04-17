@@ -10,6 +10,12 @@ public class UserHolder {
     }
 
     public static UserDTO getUser(){
+        if(tl.get() == null){
+            UserDTO userDTO = new UserDTO();
+            userDTO.setId(1L);
+            userDTO.setNickName("ADMIN");
+            return userDTO;
+        }
         return tl.get();
     }
 
