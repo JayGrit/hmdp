@@ -60,14 +60,14 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
 
         Lockv1 lock = new Lockv1(prefix, stringRedisTemplate);
-        boolean isLock = lock.tryLock(userStr);
+        boolean isLock = lock.tryLock();
         if(!isLock)
             return fail("一人一单");
 
         try{
             return proxy.createVoucherOrder(id);
         } finally{
-            lock.delLock(userStr);
+            lock.delLock();
         }
 
     }
