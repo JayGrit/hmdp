@@ -2,8 +2,11 @@ package com.hmdp.utils;
 
 
 import cn.hutool.core.lang.UUID;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 public class Lockv1 implements ILock {
@@ -12,6 +15,13 @@ public class Lockv1 implements ILock {
     String LOCK_PREFIX = "lock:";
     StringRedisTemplate stringRedisTemplate;
     String uuid = UUID.randomUUID().toString(true);
+    private static final DefaultRedisScript<Long> luaScript;
+
+    static{
+        luaScript = new DefaultRedisScript<>();
+        luaScript.setLocation(new ClassPathResource("unlock.lua"));
+        luaScript.setResultType(Long.class);
+    }
 
     public Lockv1(String name,StringRedisTemplate stringRedisTemplate) {
         this.name = name;
@@ -28,10 +38,12 @@ public class Lockv1 implements ILock {
 
     @Override
     public void delLock() {
-        String myValue = uuid + Thread.currentThread().getId();
         String key = LOCK_PREFIX + name;
-        String value = this.stringRedisTemplate.opsForValue().get(key);
-        if(myValue.equals(value))
-            stringRedisTemplate.delete(key);
+        String myValue = uuid + Thread.currentThread().getId();
+        stringRedisTemplate.execute(
+                luaScript,
+                Collections.singletonList(key),
+                myValue
+                );
     }
 }
