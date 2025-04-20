@@ -2,6 +2,8 @@ package com.hmdp.utils;
 
 import com.hmdp.dto.UserDTO;
 
+import java.util.Random;
+
 public class UserHolder {
     private static final ThreadLocal<UserDTO> tl = new ThreadLocal<>();
 
@@ -12,7 +14,9 @@ public class UserHolder {
     public static UserDTO getUser(){
         if(tl.get() == null){
             UserDTO userDTO = new UserDTO();
-            userDTO.setId(1L);
+            long mockId = Math.abs(new Random().nextLong());
+            userDTO.setId(mockId);
+//            userDTO.setId(1L);
             userDTO.setNickName("ADMIN");
             return userDTO;
         }

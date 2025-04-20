@@ -6,5 +6,5 @@ public interface ILock {
 
     boolean tryLock();
 
-    void delLock();
+    void unLock();
 }

@@ -37,7 +37,7 @@ public class Lockv1 implements ILock {
     }
 
     @Override
-    public void delLock() {
+    public void unLock() {
         String key = LOCK_PREFIX + name;
         String myValue = uuid + Thread.currentThread().getId();
         stringRedisTemplate.execute(

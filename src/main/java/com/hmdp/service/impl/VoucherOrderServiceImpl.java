@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.Lockv1;
 import com.hmdp.utils.RedisIdGenerator;
 import com.hmdp.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -39,8 +41,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Resource
     private IVoucherOrderService proxy;
 
+//    @Resource
+//    private StringRedisTemplate stringRedisTemplate;
+
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedissonClient redisson;
+
 
     @Override
     public Result addSeckillOrder(long id) {
@@ -55,11 +61,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if(seckillVoucher.getStock() < 1)
             return fail("卖完了");
 
-        String userStr = UserHolder.getUser().toString();
-        String prefix = "order:";
 
-
-        Lockv1 lock = new Lockv1(prefix, stringRedisTemplate);
+//        String prefix = "order:";
+//        Lockv1 lock = new Lockv1(prefix, stringRedisTemplate);
+        long userId = UserHolder.getUser().getId();
+        RLock lock = redisson.getLock("hmdp:lock:order:" + userId);
         boolean isLock = lock.tryLock();
         if(!isLock)
             return fail("一人一单");
@@ -67,7 +73,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         try{
             return proxy.createVoucherOrder(id);
         } finally{
-            lock.delLock();
+            lock.unlock();
         }
 
     }
